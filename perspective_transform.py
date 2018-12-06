@@ -3,49 +3,39 @@ import cv2
 import numpy as np
 import sys
 
-img = cv2.imread('test.jpg')
-# cv2.imshow("original", img)
-
-# expand image
-img = cv2.copyMakeBorder(img, 200, 200, 200, 200, cv2.BORDER_CONSTANT, 0)
-h, w = img.shape[0:2]
-
-anglex = 0
-angley = 0
-anglez = 0 
+roll = 0 
+pitch = 0
+yaw = 0
 fov = 60
-r = 0
 
 def rad(x):
     return x * np.pi / 180
 
-def get_warpR():
-    global anglex,angley,anglez,fov,w,h,r
-    # 镜头与图像间的距离，21为半可视角，算z的距离是为了保证在此可视角度下恰好显示整幅图像
-    z = np.sqrt(w ** 2 + h ** 2) / 2 / np.tan(rad(fov / 2))
-    # 齐次变换矩阵
+def get_warpR(h, w):
+    global roll,pitch,yaw,fov
+    # rotate matrix of roll pitch yaw
     # rx = np.array([[1, 0, 0, 0],
-    #                [0, np.cos(rad(anglex)), -np.sin(rad(anglex)), 0],
-    #                [0, -np.sin(rad(anglex)), np.cos(rad(anglex)), 0, ],
+    #                [0, np.cos(rad(roll)), -np.sin(rad(roll)), 0],
+    #                [0, -np.sin(rad(roll)), np.cos(rad(roll)), 0, ],
     #                [0, 0, 0, 1]], np.float32)
 
-    # ry = np.array([[np.cos(rad(angley)), 0, np.sin(rad(angley)), 0],
+    # ry = np.array([[np.cos(rad(pitch)), 0, np.sin(rad(pitch)), 0],
     #                [0, 1, 0, 0],
-    #                [-np.sin(rad(angley)), 0, np.cos(rad(angley)), 0, ],
+    #                [-np.sin(rad(pitch)), 0, np.cos(rad(pitch)), 0, ],
     #                [0, 0, 0, 1]], np.float32)
 
-    # rz = np.array([[np.cos(rad(anglez)), np.sin(rad(anglez)), 0, 0],
-    #                [-np.sin(rad(anglez)), np.cos(rad(anglez)), 0, 0],
+    # rz = np.array([[np.cos(rad(yaw)), np.sin(rad(yaw)), 0, 0],
+    #                [-np.sin(rad(yaw)), np.cos(rad(yaw)), 0, 0],
     #                [0, 0, 1, 0],
     #                [0, 0, 0, 1]], np.float32)
 
     # r = rx.dot(ry).dot(rz)
-    sinx = np.sin(rad(anglex))
-    cosx = np.cos(rad(anglex))
-    siny = np.sin(rad(angley))
-    cosy = np.cos(rad(angley))
-    sinz = np.sin(rad(anglez))
-    cosz = np.cos(rad(anglez))
+    sinx = np.sin(rad(roll))
+    cosx = np.cos(rad(roll))
+    siny = np.sin(rad(pitch))
+    cosy = np.cos(rad(pitch))
+    sinz = np.sin(rad(yaw))
+    cosz = np.cos(rad(yaw))
     # rotate matrix
     r = np.array([[ cosy*cosz, -cosx*sinz+sinx*siny*cosz, sinx*sinz+cosx*siny*cosz, 0],
                   [ cosy*sinz, cosx*cosz+sinx*siny*sinz, -sinx*cosz+cosx*siny*sinz, 0],
@@ -82,50 +72,56 @@ def get_warpR():
     return warpR
 
 def control(c):
-    global anglex,angley,anglez,fov,r
+    global roll,pitch,yaw,fov
 
-    # 键盘控制
+    # keyboard control
     if 27 == c:  # Esc quit
         sys.exit()
     if c == ord('w'):
-        anglex += 1
+        roll += 1
     if c == ord('s'):
-        anglex -= 1
+        roll -= 1
     if c == ord('a'):
-        angley += 1
-        print(angley)
-        # dx=0
+        pitch += 1
     if c == ord('d'):
-        angley -= 1
+        pitch -= 1
     if c == ord('u'):
-        anglez += 1
+        yaw += 1
     if c == ord('p'):
-        anglez -= 1
+        yaw -= 1
     if c == ord('t'):
         fov += 1
     if c == ord('r'):
         fov -= 1
     if c == ord(' '):
-        anglex = angley = anglez = 0
+        roll = pitch = yaw = 0
     if c == ord('e'):
         print("======================================")
-        print('Rotation Matrix:')
-        print(r)
-        print('angle alpha(anglex):')
-        print(anglex)
-        print('angle beta(angley):')
-        print(angley)
-        print('dz(anglez):')
-        print(anglez)
+        print('angle alpha(roll):')
+        print(roll)
+        print('angle beta(pitch):')
+        print(pitch)
+        print('dz(yaw):')
+        print(yaw)
+
+if __name__=="__main__":
+    img = cv2.imread('test.jpg')
+    # cv2.imshow("original", img)
+
+    # expand image
+    img = cv2.copyMakeBorder(img, 200, 200, 200, 200, cv2.BORDER_CONSTANT, 0)
+    h, w = img.shape[0:2]
 
 
-while True:
-    warpR = get_warpR()
+    # get distance from image to camera
+    z = np.sqrt(w ** 2 + h ** 2) / 2 / np.tan(rad(fov / 2))
 
-    result = cv2.warpPerspective(img, warpR, (w, h))
-    cv2.namedWindow('result',2)
-    cv2.imshow("result", result)
-    c = 0xFF & cv2.waitKey(30)
-    control(c)
+    while True:
+        warpR = get_warpR(h, w)
+        result = cv2.warpPerspective(img, warpR, (w, h))
+        cv2.namedWindow('result',2)
+        cv2.imshow("result", result)
+        c = 0xFF & cv2.waitKey(1)
+        control(c)
 
 cv2.destroyAllWindows()
